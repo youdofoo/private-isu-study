@@ -302,7 +302,7 @@ func getInitialize(w http.ResponseWriter, r *http.Request) {
 	for _, p := range posts {
 
 		ext := getExt(p.Mime)
-		file, err := os.Create(fmt.Sprintf("public/img/%d.%s", p.ID, ext))
+		file, err := os.Create(fmt.Sprintf("../public/img/%d.%s", p.ID, ext))
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -720,7 +720,7 @@ func postIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	imagefile, err := os.Create(fmt.Sprintf("public/img/%d.%s", pid, getExt(mime)))
+	imagefile, err := os.Create(fmt.Sprintf("../public/img/%d.%s", pid, getExt(mime)))
 	if err != nil {
 		log.Print(err)
 		return
