@@ -176,6 +176,11 @@ func getFlash(w http.ResponseWriter, r *http.Request, key string) string {
 	}
 }
 
+type CommentUser struct {
+	Comment Comment `db:"comment"`
+	User    User    `db:"user"`
+}
+
 func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, error) {
 	var posts []Post
 
@@ -185,22 +190,29 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 			return nil, err
 		}
 
-		query := "SELECT * FROM `comments` WHERE `post_id` = ? ORDER BY `created_at` DESC"
+		query := "SELECT c.`id` AS `comment.id`, c.`post_id` AS `comment.post_id`, c.`user_id` AS `comment.user_id`, c.`comment` AS `comment.comment`, c.`created_at` AS `comment.created_at`, u.`id` AS `user.id`, u.`account_name` AS `user.account_name`, u.`passhash` AS `user.passhash`, u.`authority` AS `user.authority`, u.`del_flg` AS `user.del_flg`, u.`created_at` AS `user.created_at` FROM `comments` AS c JOIN `users` AS u ON c.`user_id` = u.`id` WHERE c.`post_id` = ? ORDER BY c.`created_at` DESC"
 		if !allComments {
 			query += " LIMIT 3"
 		}
-		var comments []Comment
-		err = db.Select(&comments, query, p.ID)
+		var commentUsers []CommentUser
+		err = db.Select(&commentUsers, query, p.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		for i := 0; i < len(comments); i++ {
-			err := db.Get(&comments[i].User, "SELECT * FROM `users` WHERE `id` = ?", comments[i].UserID)
-			if err != nil {
-				return nil, err
-			}
+		comments := make([]Comment, len(commentUsers))
+		for i := range comments {
+			comments[i] = commentUsers[i].Comment
+			comments[i].User = commentUsers[i].User
 		}
+
+		/*
+			for i := 0; i < len(comments); i++ {
+				err := db.Get(&comments[i].User, "SELECT * FROM `users` WHERE `id` = ?", comments[i].UserID)
+				if err != nil {
+					return nil, err
+				}
+			}*/
 
 		// reverse
 		for i, j := 0, len(comments)-1; i < j; i, j = i+1, j-1 {
