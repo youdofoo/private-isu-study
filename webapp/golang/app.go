@@ -702,7 +702,7 @@ func postIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := "INSERT INTO `posts` (`user_id`, `mime`, `body`) VALUES (?,?,?,?)"
+	query := "INSERT INTO `posts` (`user_id`, `mime`, `body`) VALUES (?,?,?)"
 	result, err := db.Exec(
 		query,
 		me.ID,
