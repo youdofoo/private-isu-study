@@ -195,7 +195,7 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 	}
 
 	var commentCounts []CommentCount
-	err := db.Select(&commentCounts, fmt.Sprintf("SELECT post_id, COUNT(*) AS `count` FROM `comments` GROUP BY `post_id` IN (%s)", strings.Join(postIDs, ",")))
+	err := db.Select(&commentCounts, fmt.Sprintf("SELECT post_id, COUNT(*) AS `count` FROM `comments` GROUP BY `post_id` HAVING `post_id` IN (%s)", strings.Join(postIDs, ",")))
 	if err != nil {
 		return nil, err
 	}
