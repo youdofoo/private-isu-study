@@ -7,7 +7,7 @@ install-alp:
 
 
 NGINX_LOG=/var/log/nginx/access.log
-MATCHING="/@\w+","/posts/[0-9]+","/image/[0-9]\.(jpg|png)"
+MATCHING="/@\w+","/posts/[0-9]+","/image/[0-9]+\.(jpg|png)"
 FIELDS=count,2xx,3xx,5xx,method,uri,min,max,sum,avg,p99
 
 .PHONY: alp
