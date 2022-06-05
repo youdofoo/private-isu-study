@@ -177,6 +177,7 @@ func getFlash(w http.ResponseWriter, r *http.Request, key string) string {
 }
 
 type CommentUser struct {
+	PostID  int     `db:"post_id"`
 	Comment Comment `db:"comment"`
 	User    User    `db:"user"`
 }
@@ -189,12 +190,12 @@ type CommentCount struct {
 func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, error) {
 	var posts []Post
 
-	/*
-		postIDs := make([]string, len(results))
-		for i := range results {
-			postIDs[i] = fmt.Sprint(results[i].ID)
-		}
+	postIDs := make([]string, len(results))
+	for i := range results {
+		postIDs[i] = fmt.Sprint(results[i].ID)
+	}
 
+	/*
 		var commentCounts []CommentCount
 		err := db.Select(&commentCounts, fmt.Sprintf("SELECT post_id, COUNT(*) AS `count` FROM `comments` GROUP BY `post_id` HAVING `post_id` IN (%s)", strings.Join(postIDs, ",")))
 		if err != nil {
@@ -220,27 +221,53 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 		userMap[u.ID] = u
 	}
 
+	var commentUsers []*CommentUser
+
+	query := fmt.Sprintf("SELECT p.`id` AS `post_id`, c.`id` AS `comment.id`, c.`post_id` AS `comment.post_id`, c.`user_id` AS `comment.user_id`, c.`comment` AS `comment.comment`, c.`created_at` AS `comment.created_at`, u.`id` AS `user.id`, u.`account_name` AS `user.account_name`, u.`passhash` AS `user.passhash`, u.`authority` AS `user.authority`, u.`del_flg` AS `user.del_flg`, u.`created_at` AS `user.created_at` FROM `comments` AS c JOIN `users` AS u ON c.`user_id` = u.`id` JOIN `posts` AS p ON p.`id` = c.`post_id` AND p.`id` IN (%s) ORDER BY c.`created_at` DESC", strings.Join(postIDs, ","))
+	if !allComments {
+		query += " LIMIT 3"
+	}
+	err = db.Get(&commentUsers, query)
+	if err != nil {
+		return nil, err
+	}
+	postMap := make(map[int][]*CommentUser, len(commentUsers))
+	for _, cu := range commentUsers {
+		if _, ok := postMap[cu.PostID]; !ok {
+			postMap[cu.PostID] = make([]*CommentUser, 0)
+		}
+		postMap[cu.PostID] = append(postMap[cu.PostID], cu)
+	}
+
 	for _, p := range results {
-		err := db.Get(&p.CommentCount, "SELECT COUNT(*) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
+		err := db.Get(&p.CommentCount, "SELECT COUNT(id) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
 		if err != nil {
 			return nil, err
 		}
 		//p.CommentCount = countMap[p.ID]
 
-		query := "SELECT c.`id` AS `comment.id`, c.`post_id` AS `comment.post_id`, c.`user_id` AS `comment.user_id`, c.`comment` AS `comment.comment`, c.`created_at` AS `comment.created_at`, u.`id` AS `user.id`, u.`account_name` AS `user.account_name`, u.`passhash` AS `user.passhash`, u.`authority` AS `user.authority`, u.`del_flg` AS `user.del_flg`, u.`created_at` AS `user.created_at` FROM `comments` AS c JOIN `users` AS u ON c.`user_id` = u.`id` WHERE c.`post_id` = ? ORDER BY c.`created_at` DESC"
-		if !allComments {
-			query += " LIMIT 3"
-		}
-		var commentUsers []CommentUser
-		err = db.Select(&commentUsers, query, p.ID)
-		if err != nil {
-			return nil, err
-		}
+		/*
+			query := "SELECT c.`id` AS `comment.id`, c.`post_id` AS `comment.post_id`, c.`user_id` AS `comment.user_id`, c.`comment` AS `comment.comment`, c.`created_at` AS `comment.created_at`, u.`id` AS `user.id`, u.`account_name` AS `user.account_name`, u.`passhash` AS `user.passhash`, u.`authority` AS `user.authority`, u.`del_flg` AS `user.del_flg`, u.`created_at` AS `user.created_at` FROM `comments` AS c JOIN `users` AS u ON c.`user_id` = u.`id` WHERE c.`post_id` = ? ORDER BY c.`created_at` DESC"
+			if !allComments {
+				query += " LIMIT 3"
+			}
+			var commentUsers []CommentUser
+			err = db.Select(&commentUsers, query, p.ID)
+			if err != nil {
+				return nil, err
+			}
 
-		comments := make([]Comment, len(commentUsers))
+			comments := make([]Comment, len(commentUsers))
+			for i := range comments {
+				comments[i] = commentUsers[i].Comment
+				comments[i].User = commentUsers[i].User
+			}*/
+
+		postCU := postMap[p.ID]
+		comments := make([]Comment, len(postCU))
 		for i := range comments {
-			comments[i] = commentUsers[i].Comment
-			comments[i].User = commentUsers[i].User
+			comments[i] = postCU[i].Comment
+			comments[i].User = postCU[i].User
 		}
 
 		/*
