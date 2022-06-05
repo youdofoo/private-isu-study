@@ -181,14 +181,47 @@ type CommentUser struct {
 	User    User    `db:"user"`
 }
 
+type CommentCount struct {
+	PostID int `db:"post_id"`
+	Count  int `db:"count"`
+}
+
 func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, error) {
 	var posts []Post
 
+	var commentCounts []CommentCount
+	err := db.Select(&commentCounts, "SELECT post_id, COUNT(*) AS `count` FROM `comments` GROUP BY `post_id`")
+	if err != nil {
+		return nil, err
+	}
+	countMap := make(map[int]int, len(commentCounts))
+	for _, c := range commentCounts {
+		countMap[c.PostID] = c.Count
+	}
+
+	postUserIDs := make([]string, len(results))
+	for i := range results {
+		postUserIDs[i] = fmt.Sprint(results[i].UserID)
+	}
+
+	var postUsers []*User
+	err = db.Select(&postUsers, "SELECT * FROM `users` WHERE `id` IN (%s)", strings.Join(postUserIDs, ","))
+	if err != nil {
+		return nil, err
+	}
+	userMap := make(map[int]*User, len(postUsers))
+	for _, u := range postUsers {
+		userMap[u.ID] = u
+	}
+
 	for _, p := range results {
-		err := db.Get(&p.CommentCount, "SELECT COUNT(*) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
-		if err != nil {
-			return nil, err
-		}
+		/*
+			err := db.Get(&p.CommentCount, "SELECT COUNT(*) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
+			if err != nil {
+				return nil, err
+			}
+		*/
+		p.CommentCount = countMap[p.ID]
 
 		query := "SELECT c.`id` AS `comment.id`, c.`post_id` AS `comment.post_id`, c.`user_id` AS `comment.user_id`, c.`comment` AS `comment.comment`, c.`created_at` AS `comment.created_at`, u.`id` AS `user.id`, u.`account_name` AS `user.account_name`, u.`passhash` AS `user.passhash`, u.`authority` AS `user.authority`, u.`del_flg` AS `user.del_flg`, u.`created_at` AS `user.created_at` FROM `comments` AS c JOIN `users` AS u ON c.`user_id` = u.`id` WHERE c.`post_id` = ? ORDER BY c.`created_at` DESC"
 		if !allComments {
@@ -221,10 +254,12 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 
 		p.Comments = comments
 
-		err = db.Get(&p.User, "SELECT * FROM `users` WHERE `id` = ?", p.UserID)
-		if err != nil {
-			return nil, err
-		}
+		/*
+			err = db.Get(&p.User, "SELECT * FROM `users` WHERE `id` = ?", p.UserID)
+			if err != nil {
+				return nil, err
+			}*/
+		p.User = *userMap[p.UserID]
 
 		p.CSRFToken = csrfToken
 
