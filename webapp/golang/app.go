@@ -202,16 +202,17 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 	for i := range results {
 		postIDs[i] = fmt.Sprint(results[i].ID)
 	}
-
-	var commentCounts []CommentCount
-	err := db.Select(&commentCounts, fmt.Sprintf("SELECT * FROM `comment_count` WHERE `post_id` IN (%s)", strings.Join(postIDs, ",")))
-	if err != nil {
-		return nil, err
-	}
-	countMap := make(map[int]int, len(commentCounts))
-	for _, c := range commentCounts {
-		countMap[c.PostID] = c.Count
-	}
+	/*
+		var commentCounts []CommentCount
+		err := db.Select(&commentCounts, fmt.Sprintf("SELECT * FROM `comment_count` WHERE `post_id` IN (%s)", strings.Join(postIDs, ",")))
+		if err != nil {
+			return nil, err
+		}
+		countMap := make(map[int]int, len(commentCounts))
+		for _, c := range commentCounts {
+			countMap[c.PostID] = c.Count
+		}
+	*/
 
 	postUserIDs := make([]string, len(results))
 	for i := range results {
@@ -247,12 +248,11 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 	}
 
 	for _, p := range results {
-		/*err := db.Get(&p.CommentCount, "SELECT COUNT(id) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
+		err := db.Get(&p.CommentCount, "SELECT `count` FROM `comment_count` WHERE `post_id` = ?", p.ID)
 		if err != nil {
 			return nil, err
 		}
-		*/
-		p.CommentCount = countMap[p.ID]
+		//p.CommentCount = countMap[p.ID]
 
 		/*
 			query := "SELECT c.`id` AS `comment.id`, c.`post_id` AS `comment.post_id`, c.`user_id` AS `comment.user_id`, c.`comment` AS `comment.comment`, c.`created_at` AS `comment.created_at`, u.`id` AS `user.id`, u.`account_name` AS `user.account_name`, u.`passhash` AS `user.passhash`, u.`authority` AS `user.authority`, u.`del_flg` AS `user.del_flg`, u.`created_at` AS `user.created_at` FROM `comments` AS c JOIN `users` AS u ON c.`user_id` = u.`id` WHERE c.`post_id` = ? ORDER BY c.`created_at` DESC"
