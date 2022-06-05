@@ -280,11 +280,11 @@ func getTemplPath(filename string) string {
 func getExt(mime string) string {
 	ext := ""
 	if mime == "image/jpeg" {
-		ext = ".jpg"
+		ext = "jpg"
 	} else if mime == "image/png" {
-		ext = ".png"
+		ext = "png"
 	} else if mime == "image/gif" {
-		ext = ".gif"
+		ext = "gif"
 	}
 	return ext
 }
