@@ -43,7 +43,7 @@ deploy-nginx:
 
 .PHONY: deploy-mysql
 deploy-mysql:
-	sudo cp -rf mysql/mysqld.conf /etc/mysql/mysql.conf.d/ && sudo systemctl restart mysql
+	sudo cp -rf mysql/mysqld.cnf /etc/mysql/mysql.conf.d/ && sudo systemctl restart mysql
 
 .PHONY: deploy
 deploy: deploy-app deploy-nginx deploy-mysql
