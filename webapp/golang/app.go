@@ -203,17 +203,16 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 	for i := range results {
 		postIDs[i] = fmt.Sprint(results[i].ID)
 	}
-	/*
-		var commentCounts []CommentCount
-		err := db.Select(&commentCounts, fmt.Sprintf("SELECT * FROM `comment_count` WHERE `post_id` IN (%s)", strings.Join(postIDs, ",")))
-		if err != nil {
-			return nil, err
-		}
-		countMap := make(map[int]int, len(commentCounts))
-		for _, c := range commentCounts {
-			countMap[c.PostID] = c.Count
-		}
-	*/
+
+	var commentCounts []CommentCount
+	err = db.Select(&commentCounts, fmt.Sprintf("SELECT * FROM `comment_count` WHERE `post_id` IN (%s)", strings.Join(postIDs, ",")))
+	if err != nil {
+		return nil, err
+	}
+	countMap := make(map[int]int, len(commentCounts))
+	for _, c := range commentCounts {
+		countMap[c.PostID] = c.Count
+	}
 
 	postUserIDs := make([]string, len(results))
 	for i := range results {
@@ -249,11 +248,13 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 	}
 
 	for _, p := range results {
-		err := db.Get(&p.CommentCount, "SELECT `count` FROM `comment_count` WHERE `post_id` = ?", p.ID)
-		if err != nil {
-			return nil, err
-		}
-		//p.CommentCount = countMap[p.ID]
+		/*
+			err := db.Get(&p.CommentCount, "SELECT `count` FROM `comment_count` WHERE `post_id` = ?", p.ID)
+			if err != nil {
+				return nil, err
+			}
+		*/
+		p.CommentCount = countMap[p.ID]
 
 		/*
 			query := "SELECT c.`id` AS `comment.id`, c.`post_id` AS `comment.post_id`, c.`user_id` AS `comment.user_id`, c.`comment` AS `comment.comment`, c.`created_at` AS `comment.created_at`, u.`id` AS `user.id`, u.`account_name` AS `user.account_name`, u.`passhash` AS `user.passhash`, u.`authority` AS `user.authority`, u.`del_flg` AS `user.del_flg`, u.`created_at` AS `user.created_at` FROM `comments` AS c JOIN `users` AS u ON c.`user_id` = u.`id` WHERE c.`post_id` = ? ORDER BY c.`created_at` DESC"
@@ -777,8 +778,15 @@ func postIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tx, err := db.Beginx()
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	defer tx.Rollback()
+
 	query := "INSERT INTO `posts` (`user_id`, `mime`, `body`) VALUES (?,?,?)"
-	result, err := db.Exec(
+	result, err := tx.Exec(
 		query,
 		me.ID,
 		mime,
@@ -794,6 +802,13 @@ func postIndex(w http.ResponseWriter, r *http.Request) {
 		log.Print(err)
 		return
 	}
+
+	_, err = tx.Exec("INSERT INTO `comment_count` (`post_id`, `count`) VALUES (?, 0)", pid)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	tx.Commit()
 
 	imagefile, err := os.Create(fmt.Sprintf("../public/img/%d.%s", pid, getExt(mime)))
 	if err != nil {
@@ -871,7 +886,7 @@ func postComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = tx.Exec("INSERT INTO `comment_count` (`post_id`, `count`) VALUES (?,1) ON DUPLICATE KEY UPDATE count = count+1", postID)
+	_, err = tx.Exec("UPDATE `comment_count` SET `count` = `count`+1 WHERE `post_id` = ?", postID)
 	if err != nil {
 		log.Print(err)
 		return
