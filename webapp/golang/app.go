@@ -291,31 +291,31 @@ func getExt(mime string) string {
 
 func getInitialize(w http.ResponseWriter, r *http.Request) {
 	dbInitialize()
+	/*
+		var posts []Post
 
-	var posts []Post
-
-	err := db.Select(&posts, "SELECT * FROM posts")
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	for _, p := range posts {
-
-		ext := getExt(p.Mime)
-		file, err := os.Create(fmt.Sprintf("../public/img/%d.%s", p.ID, ext))
+		err := db.Select(&posts, "SELECT * FROM posts")
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		_, err = file.Write(p.Imgdata)
-		if err != nil {
+		for _, p := range posts {
+
+			ext := getExt(p.Mime)
+			file, err := os.Create(fmt.Sprintf("../public/img/%d.%s", p.ID, ext))
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			_, err = file.Write(p.Imgdata)
+			if err != nil {
+				file.Close()
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 			file.Close()
-			w.WriteHeader(http.StatusInternalServerError)
-			return
 		}
-		file.Close()
-	}
-
+	*/
 	w.WriteHeader(http.StatusOK)
 }
 
