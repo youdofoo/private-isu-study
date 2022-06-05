@@ -25,6 +25,8 @@ import (
 	goji "goji.io"
 	"goji.io/pat"
 	"goji.io/pattern"
+
+	_ "net/http/pprof"
 )
 
 var (
@@ -821,6 +823,9 @@ func (reg *RegexpPattern) Match(r *http.Request) *http.Request {
 }
 
 func main() {
+	go func() {
+		log.Print(http.ListenAndServe("localhost:6060", nil))
+	}()
 	host := os.Getenv("ISUCONP_DB_HOST")
 	if host == "" {
 		host = "localhost"
