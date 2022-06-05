@@ -227,7 +227,7 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 	if !allComments {
 		query += " LIMIT 3"
 	}
-	err = db.Get(&commentUsers, query)
+	err = db.Select(&commentUsers, query)
 	if err != nil {
 		return nil, err
 	}
