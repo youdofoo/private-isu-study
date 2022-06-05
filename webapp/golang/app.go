@@ -93,6 +93,14 @@ func dbInitialize() {
 	for _, sql := range sqls {
 		db.Exec(sql)
 	}
+
+	cmd := exec.Command("../sql/init.sh")
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func tryLogin(accountName, password string) *User {
