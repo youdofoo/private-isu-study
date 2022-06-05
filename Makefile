@@ -22,7 +22,7 @@ pt:
 
 .PHONY: slow
 slow:
-	sudo mysqldumpslow -s t | head -n 20
+	sudo mysqldumpslow -s t ${SQ_LOG} | head -n 20
 
 .PHONY: deploy-app
 deploy-app:
