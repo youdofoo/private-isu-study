@@ -197,6 +197,7 @@ type CommentCount struct {
 
 func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, error) {
 	var posts []Post
+	var err error
 
 	postIDs := make([]string, len(results))
 	for i := range results {
