@@ -26,7 +26,7 @@ slow:
 
 .PHONY: deploy-app
 deploy-app:
-	cd webapp/golang && make build && sudo systemctl restart isu-go.service
+	cd webapp/golang && make && sudo systemctl restart isu-go.service
 
 .PHONY: reset-log
 reset-log:
@@ -47,4 +47,3 @@ deploy-mysql:
 
 .PHONY: deploy
 deploy: deploy-app deploy-nginx deploy-mysql
- 
