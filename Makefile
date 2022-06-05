@@ -24,8 +24,8 @@ pt:
 slow:
 	sudo mysqldumpslow -s t | head -n 20
 
-.PHONY: deploy
-deploy:
+.PHONY: deploy-app
+deploy-app:
 	cd webapp/golang && make build && sudo systemctl restart isu-go.service
 
 .PHONY: reset-log
@@ -42,4 +42,9 @@ deploy-nginx:
 	sudo cp -rf nginx/* /etc/nginx/ && sudo systemctl restart nginx
 
 .PHONY: deploy-mysql
+deploy-mysql:
 	sudo cp -rf mysql/mysqld.conf /etc/mysql/mysql.conf.d/ && sudo systemctl restart mysql
+
+.PHONY: deploy
+deploy: deploy-app deploy-nginx deploy-mysql
+ 
