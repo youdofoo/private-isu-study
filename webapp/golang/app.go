@@ -277,8 +277,45 @@ func getTemplPath(filename string) string {
 	return path.Join("templates", filename)
 }
 
+func getExt(mime string) string {
+	ext := ""
+	if mime == "image/jpeg" {
+		ext = ".jpg"
+	} else if mime == "image/png" {
+		ext = ".png"
+	} else if mime == "image/gif" {
+		ext = ".gif"
+	}
+	return ext
+}
+
 func getInitialize(w http.ResponseWriter, r *http.Request) {
 	dbInitialize()
+
+	var posts []Post
+
+	err := db.Select(&posts, "SELECT * FROM posts")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	for _, p := range posts {
+
+		ext := getExt(p.Mime)
+		file, err := os.Create(fmt.Sprintf("public/img/%d.%s", p.ID, ext))
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		_, err = file.Write(p.Imgdata)
+		if err != nil {
+			file.Close()
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		file.Close()
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -665,12 +702,11 @@ func postIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := "INSERT INTO `posts` (`user_id`, `mime`, `imgdata`, `body`) VALUES (?,?,?,?)"
+	query := "INSERT INTO `posts` (`user_id`, `mime`, `body`) VALUES (?,?,?,?)"
 	result, err := db.Exec(
 		query,
 		me.ID,
 		mime,
-		filedata,
 		r.FormValue("body"),
 	)
 	if err != nil {
@@ -683,6 +719,14 @@ func postIndex(w http.ResponseWriter, r *http.Request) {
 		log.Print(err)
 		return
 	}
+
+	imagefile, err := os.Create(fmt.Sprintf("public/img/%d.%s", pid, getExt(mime)))
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	defer imagefile.Close()
+	imagefile.Write(filedata)
 
 	http.Redirect(w, r, "/posts/"+strconv.FormatInt(pid, 10), http.StatusFound)
 }
