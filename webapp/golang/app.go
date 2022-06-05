@@ -189,8 +189,13 @@ type CommentCount struct {
 func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, error) {
 	var posts []Post
 
+	postIDs := make([]string, len(results))
+	for i := range results {
+		postIDs[i] = fmt.Sprint(results[i].ID)
+	}
+
 	var commentCounts []CommentCount
-	err := db.Select(&commentCounts, "SELECT post_id, COUNT(*) AS `count` FROM `comments` GROUP BY `post_id`")
+	err := db.Select(&commentCounts, fmt.Sprintf("SELECT post_id, COUNT(*) AS `count` FROM `comments` GROUP BY `post_id` IN (%s)", strings.Join(postIDs, ",")))
 	if err != nil {
 		return nil, err
 	}
