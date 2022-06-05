@@ -574,7 +574,7 @@ func getPosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	results := []Post{}
-	err = db.Select(&results, "SELECT `id`, `user_id`, `body`, `mime`, `created_at` FROM `posts` WHERE `created_at` <= ? ORDER BY `created_at` DESC", t.Format(ISO8601Format))
+	err = db.Select(&results, fmt.Sprintf("SELECT p.`id`, p.`user_id`, p.`body`, p.`mime`, p.`created_at` FROM `posts` AS p JOIN `users` AS u ON u.`id` = p.`user_id` AND u.`del_flg` = 0 WHERE p.`created_at` <= ? ORDER BY p.`created_at` DESC LIMIT %d", postsPerPage), t.Format(ISO8601Format))
 	if err != nil {
 		log.Print(err)
 		return
