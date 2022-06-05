@@ -94,7 +94,7 @@ func dbInitialize() {
 		db.Exec(sql)
 	}
 
-	cmd := exec.Command("../sql/init.sh")
+	cmd := exec.Command("/home/isucon/private_isu/sql/init.sh")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stderr
 	err := cmd.Run()
