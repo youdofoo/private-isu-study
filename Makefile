@@ -36,3 +36,10 @@ reset-log:
 .PHONY: pprof
 pprof:
 	go tool pprof -http=localhost:9999 http://localhost:6060/debug/pprof/profile
+
+.PHONY: deploy-nginx
+deploy-nginx:
+	sudo cp -rf nginx/* /etc/nginx/ && sudo systemctl restart nginx
+
+.PHONY: deploy-mysql
+	sudo cp -rf mysql/mysqld.conf /etc/mysql/mysql.conf.d/ && sudo systemctl restart mysql
