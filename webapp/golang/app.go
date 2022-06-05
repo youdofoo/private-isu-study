@@ -203,16 +203,15 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 		postIDs[i] = fmt.Sprint(results[i].ID)
 	}
 
-	/*
-		var commentCounts []CommentCount
-		err := db.Select(&commentCounts, fmt.Sprintf("SELECT post_id, COUNT(*) AS `count` FROM `comments` GROUP BY `post_id` HAVING `post_id` IN (%s)", strings.Join(postIDs, ",")))
-		if err != nil {
-			return nil, err
-		}
-		countMap := make(map[int]int, len(commentCounts))
-		for _, c := range commentCounts {
-			countMap[c.PostID] = c.Count
-		}*/
+	var commentCounts []CommentCount
+	err := db.Select(&commentCounts, fmt.Sprintf("SELECT * FROM `comment_count` WHERE `post_id` IN (%s)", strings.Join(postIDs, ",")))
+	if err != nil {
+		return nil, err
+	}
+	countMap := make(map[int]int, len(commentCounts))
+	for _, c := range commentCounts {
+		countMap[c.PostID] = c.Count
+	}
 
 	postUserIDs := make([]string, len(results))
 	for i := range results {
@@ -220,7 +219,7 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 	}
 
 	var postUsers []*User
-	err := db.Select(&postUsers, fmt.Sprintf("SELECT * FROM `users` WHERE `id` IN (%s)", strings.Join(postUserIDs, ",")))
+	err = db.Select(&postUsers, fmt.Sprintf("SELECT * FROM `users` WHERE `id` IN (%s)", strings.Join(postUserIDs, ",")))
 	if err != nil {
 		return nil, err
 	}
@@ -248,11 +247,12 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 	}
 
 	for _, p := range results {
-		err := db.Get(&p.CommentCount, "SELECT COUNT(id) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
+		/*err := db.Get(&p.CommentCount, "SELECT COUNT(id) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
 		if err != nil {
 			return nil, err
 		}
-		//p.CommentCount = countMap[p.ID]
+		*/
+		p.CommentCount = countMap[p.ID]
 
 		/*
 			query := "SELECT c.`id` AS `comment.id`, c.`post_id` AS `comment.post_id`, c.`user_id` AS `comment.user_id`, c.`comment` AS `comment.comment`, c.`created_at` AS `comment.created_at`, u.`id` AS `user.id`, u.`account_name` AS `user.account_name`, u.`passhash` AS `user.passhash`, u.`authority` AS `user.authority`, u.`del_flg` AS `user.del_flg`, u.`created_at` AS `user.created_at` FROM `comments` AS c JOIN `users` AS u ON c.`user_id` = u.`id` WHERE c.`post_id` = ? ORDER BY c.`created_at` DESC"
@@ -856,8 +856,26 @@ func postComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tx, err := db.Beginx()
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	defer tx.Rollback()
+
 	query := "INSERT INTO `comments` (`post_id`, `user_id`, `comment`) VALUES (?,?,?)"
-	_, err = db.Exec(query, postID, me.ID, r.FormValue("comment"))
+	_, err = tx.Exec(query, postID, me.ID, r.FormValue("comment"))
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	_, err = tx.Exec("INSERT INTO `comment_count` (`post_id`, `count`) VALUES (?,1) ON DUPLICATE KEY UPDATE count = count+1", postID)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	err = tx.Commit()
 	if err != nil {
 		log.Print(err)
 		return
