@@ -205,7 +205,7 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 	}
 
 	var postUsers []*User
-	err = db.Select(&postUsers, "SELECT * FROM `users` WHERE `id` IN (%s)", strings.Join(postUserIDs, ","))
+	err = db.Select(&postUsers, fmt.Sprintf("SELECT * FROM `users` WHERE `id` IN (%s)", strings.Join(postUserIDs, ",")))
 	if err != nil {
 		return nil, err
 	}
